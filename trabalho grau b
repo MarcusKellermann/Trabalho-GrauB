@@ -1,0 +1,438 @@
+#include "opencv2/core.hpp"
+#include "opencv2/imgproc.hpp"
+#include "opencv2/highgui.hpp"
+#include "opencv2/videoio.hpp"
+#include "opencv2/photo.hpp"
+#include <iostream>
+#include <filesystem>
+
+using namespace cv;
+using namespace std;
+
+enum mouseEvents { NONE, LEFTBUTTON_DOWN };
+int mouseEvent = NONE;
+int mousex, mousey;
+
+Mat imgFundo, imgFotoOriginal, imgFotoAtual;
+Mat  imgFogo, imgGotas, imgFogos, imgConfete, imgBalao,imgCoracao;
+Mat imgSt1, imgSt2, imgSt3, imgSt4, imgSt5, imgSticker;
+
+
+enum stickers { NENHUM, BALAO, CONFETE, CORACAO};
+int sticker = NENHUM;
+
+
+
+void overlayImage(Mat* src, Mat* overlay, const Point& location)
+{
+    for (int y = max(location.y, 0); y < src->rows; ++y)
+    {
+        int fY = y - location.y;
+        if (fY >= overlay->rows)
+            break;
+
+        for (int x = max(location.x, 0); x < src->cols; ++x)
+        {
+            int fX = x - location.x;
+            if (fX >= overlay->cols)
+                break;
+            double opacity = ((double)overlay->data[fY * overlay->step + fX * overlay->channels() + 3]) / 255;
+            for (int c = 0; opacity > 0 && c < src->channels(); ++c)
+            {
+                unsigned char overlayPx = overlay->data[fY * overlay->step + fX * overlay->channels() + c];
+                unsigned char srcPx = src->data[y * src->step + x * src->channels() + c];
+                src->data[y * src->step + src->channels() * x + c] = srcPx * (1. - opacity) + overlayPx * opacity;
+            }
+        }
+    }
+}
+
+void aplicaFire(double x, double y){
+    resize(imgFogo, imgSticker, Size(200, 75));
+    overlayImage(&imgFotoAtual, &imgSticker, Point(x - 459, y -566));//deslocamento do sticker
+    
+    
+
+}
+
+void aplicaoutroFire(double x, double y){
+    cout << "Aplicando sticker gotas" << endl;
+    resize(imgGotas, imgSticker, Size(200, 75));
+    overlayImage(&imgFotoAtual, &imgSticker, Point(x - 275, y -560));//deslocamento do sticker
+    
+
+}
+
+
+
+
+
+
+void aplicaSticker(double x, double y) {
+
+    if (sticker == NENHUM) {
+        cout << "Nenhum sticker selecionado" << endl;
+    }
+    else if (sticker == CORACAO) {
+       
+        resize(imgCoracao, imgSticker, Size(50, 150));
+        overlayImage(&imgFotoAtual, &imgSticker, Point(x - 475, y - 150));//deslocamento do sticker no fundo
+        
+        
+    }
+    else if (sticker == CONFETE) {
+        
+        resize(imgConfete, imgSticker, Size(250, 200));
+        overlayImage(&imgFotoAtual, &imgSticker, Point(x - 475, y - 150));//deslocamento do sticker
+        
+        
+    }
+    else if (sticker == BALAO) {
+        
+        resize(imgBalao, imgSticker, Size(120, 120));
+        overlayImage(&imgFotoAtual, &imgSticker, Point(x - 410, y - 110));//deslocamento do sticker
+        
+        
+    }
+}
+
+void setupMenu() {
+   
+    Mat imgBlur,imgBlur2,imgEscuro,imgCinza,imgClaro,imgSobel,imgShaperning,imgSharp,imgDesatura,imgErode;
+
+    // lendo os stickers 
+    imgFogo = imread("C:/Users/marke/Documents/fotos/fogo.png", IMREAD_UNCHANGED);
+    resize(imgFogo, imgSt1, Size(60, 35));
+    cvtColor(imgFogo, imgFogo, COLOR_BGR2BGRA);
+    overlayImage(&imgFundo, &imgSt1, Point(355.0, 555));
+
+    imgGotas = imread("C:/Users/marke/Documents/fotos/Confetes.png", IMREAD_UNCHANGED);
+    resize(imgGotas, imgSt2, Size(70, 40));
+    cvtColor(imgGotas, imgGotas, COLOR_BGR2BGRA);
+    overlayImage(&imgFundo, &imgSt2, Point(435.0, 555));
+
+
+    imgConfete = imread("C:/Users/marke/Documents/fotos/Confetes2.png", IMREAD_UNCHANGED);
+    resize(imgConfete, imgSt3, Size(60, 40));
+    cvtColor(imgConfete, imgConfete, COLOR_BGR2BGRA);
+    overlayImage(&imgFundo, &imgSt3, Point(515.0, 555));
+
+    imgCoracao = imread("C:/Users/marke/Documents/fotos/Coracao.png", IMREAD_UNCHANGED);
+    resize(imgCoracao, imgSt4, Size(60, 40));
+    cvtColor(imgCoracao, imgCoracao, COLOR_BGR2BGRA);
+    overlayImage(&imgFundo, &imgSt4, Point(595.0, 555));
+
+    imgBalao = imread("C:/Users/marke/Documents/fotos/Baloes.png", IMREAD_UNCHANGED);
+    resize(imgBalao, imgSt5, Size(50, 40));
+    cvtColor(imgBalao, imgBalao, COLOR_BGR2BGRA);
+    overlayImage(&imgFundo, &imgSt5, Point(675.0, 555));
+
+    // filtros
+
+    imgBlur=imread("C:/Users/marke/Documents/fotos/efeitoblur.png", IMREAD_UNCHANGED);
+    resize(imgBlur, imgBlur, Size(85, 100));
+    cvtColor(imgBlur, imgBlur, COLOR_BGR2BGRA);
+    overlayImage(&imgFundo, &imgBlur, Point(50.0, 0.0));
+
+    imgCinza=imread("C:/Users/marke/Documents/fotos/efeitocinza.png", IMREAD_UNCHANGED);
+    resize(imgCinza, imgCinza, Size(85, 100));
+    cvtColor(imgCinza, imgCinza, COLOR_BGR2BGRA);
+    overlayImage(&imgFundo, &imgCinza, Point(50.0, 100.0));
+
+    imgSobel=imread("C:/Users/marke/Documents/fotos/sobel.png", IMREAD_UNCHANGED);
+    resize(imgSobel, imgSobel, Size(85, 100));
+    cvtColor(imgSobel, imgSobel, COLOR_BGR2BGRA);
+    overlayImage(&imgFundo, &imgSobel, Point(50.0, 200.0));
+
+    imgClaro=imread("C:/Users/marke/Documents/fotos/claro.png", IMREAD_UNCHANGED);
+    resize(imgClaro, imgClaro, Size(85, 100));
+    cvtColor(imgClaro, imgClaro, COLOR_BGR2BGRA);
+    overlayImage(&imgFundo, &imgClaro, Point(50.0, 300.0));
+
+    imgEscuro=imread("C:/Users/marke/Documents/fotos/escuro.png", IMREAD_UNCHANGED);
+    resize(imgEscuro, imgEscuro, Size(85, 100));
+    cvtColor(imgEscuro, imgEscuro, COLOR_BGR2BGRA);
+    overlayImage(&imgFundo, &imgEscuro, Point(50.0, 400.0));
+
+    imgBlur2=imread("C:/Users/marke/Documents/fotos/outroblur.png", IMREAD_UNCHANGED);
+    resize(imgBlur2, imgBlur2, Size(85, 100));
+    cvtColor(imgBlur2, imgBlur2, COLOR_BGR2BGRA);
+    overlayImage(&imgFundo, &imgBlur2, Point(50.0, 500.0));
+
+    imgShaperning=imread("C:/Users/marke/Documents/fotos/pencil.png", IMREAD_UNCHANGED);
+    resize(imgShaperning, imgShaperning, Size(85, 100));
+    cvtColor(imgShaperning, imgShaperning, COLOR_BGR2BGRA);
+    overlayImage(&imgFundo, &imgShaperning, Point(140.0, 100.0));
+
+    imgSharp=imread("C:/Users/marke/Documents/fotos/shaperning.png", IMREAD_UNCHANGED);
+    resize(imgSharp, imgSharp, Size(85, 100));
+    cvtColor(imgSharp, imgSharp, COLOR_BGR2BGRA);
+    overlayImage(&imgFundo, &imgSharp, Point(140.0, 0.0));
+
+    imgDesatura=imread("C:/Users/marke/Documents/fotos/desatura.png", IMREAD_UNCHANGED);
+    resize(imgDesatura, imgDesatura, Size(85, 100));
+    cvtColor(imgDesatura, imgDesatura, COLOR_BGR2BGRA);
+    overlayImage(&imgFundo, &imgDesatura, Point(140.0, 200.0));
+
+    imgErode=imread("C:/Users/marke/Documents/fotos/erode.png", IMREAD_UNCHANGED);
+    resize(imgErode, imgErode, Size(85, 100));
+    cvtColor(imgErode, imgErode, COLOR_BGR2BGRA);
+    overlayImage(&imgFundo, &imgErode, Point(140.0, 300.0));
+
+}
+
+// Filtros
+void filtroBlur(Mat& imgCinza, Mat& imgBlur) {
+    GaussianBlur(imgCinza, imgBlur, Size(5, 5), 5, 5);
+    
+}
+
+void filtroCinza(Mat& imgCinza, Mat& imgScale){
+    cvtColor(imgScale, imgCinza, COLOR_BGR2GRAY);
+    
+}
+
+void filtroSobel(Mat& imgUm, Mat& imgDois){
+    Mat grad_x, grad_y;
+    Sobel(imgUm, grad_x, CV_16S, 1, 0, 1, 1, 0, BORDER_DEFAULT);
+    Sobel(imgUm, grad_y, CV_16S, 0, 1, 1, 1, 0, BORDER_DEFAULT);
+
+    Mat abs_grad_x, abs_grad_y, grad;
+
+    // converting back to CV_8U
+    convertScaleAbs(grad_x, abs_grad_x);
+    convertScaleAbs(grad_y, abs_grad_y);
+
+    addWeighted(abs_grad_x, 0.5, abs_grad_y, 0.5, 0, grad);
+    
+    imshow("Sobel Result", grad);
+
+}
+
+void filtroSharping(Mat& imgUm){
+    Mat sharpeningKernel = (Mat_<double>(3,3) << 0, -1, 0, -1, 5, -1, 0, -1, 0);
+
+    Mat output;
+
+
+    filter2D(imgUm, output, -1, sharpeningKernel);
+    imshow("sharpe image", output);
+
+}
+
+
+void filtroClaro(Mat& imgUm, Mat& imgDois) {
+    convertScaleAbs(imgUm, imgDois, 1.0, 50.0);
+}
+
+void filtroEscuro(Mat& imgUm, Mat& imgDois) {
+    convertScaleAbs(imgUm, imgDois, 0.5, 0.0);
+}
+
+
+void filtroOutroblur(Mat& imgUm, Mat& imgDois){
+
+    Mat result1, result2;
+
+    //define kernel size
+    int kernelSize1 = 3;
+    int kernelSize2 = 7;
+
+    //apply box filter
+    blur(imgUm, result1, Size(kernelSize1, kernelSize1), Point(-1, -1));
+    blur(imgUm, result2, Size(kernelSize2, kernelSize2), Point(-1, -1));
+    imshow("image", imgUm);
+    imshow("result1", result1);
+    imshow("result2", result2);
+}
+
+void filtroShaperning(Mat& imgUm, Mat& imgDois){
+
+    Mat output;
+
+    //convert to gray scale
+    Mat grayImage;
+    cvtColor(imgUm, grayImage, COLOR_BGR2GRAY);
+
+    //invert the gray image
+    Mat grayImageInv = 255 - grayImage;
+
+    //apply gaussian blur
+    GaussianBlur(grayImageInv, grayImageInv, Size(21, 21), 0);
+
+    //blend using color dodge
+    divide(grayImage, 255-grayImageInv, output, 256.0);
+
+    //imshow("image", imgUm);
+    imshow("pencilsketch", output);
+}
+
+void filtroDesaturacao(Mat& imgUm){
+    Mat hsvImage, hsvImageCopy;
+    cvtColor(imgUm, hsvImage, COLOR_BGR2HSV);
+
+    //create a clone of the hsv image to work on
+    hsvImageCopy = hsvImage.clone();
+
+    //convert to float32
+    hsvImageCopy.convertTo(hsvImageCopy, CV_32F);
+
+    //split the channels
+    vector<Mat> channels;
+    split(hsvImageCopy, channels);
+
+    //Define desturation scale
+    float saturationScale = 0.01;
+
+    //Desaturation. Multiply S channel desaturation scale value
+    channels[1] = channels[1] * saturationScale;
+
+    //Limiting pixel values between 0 and 255
+    min(channels[1], 255, channels[1]);
+    max(channels[1], 0, channels[1]);
+
+    //merge the channels
+    merge(channels, hsvImageCopy);
+
+    //Covert back from float32
+    hsvImageCopy.convertTo(hsvImageCopy, CV_8UC3);
+
+    //Convert back to BGR color space
+    Mat saturatedImage;
+    cvtColor(hsvImageCopy, saturatedImage, COLOR_HSV2BGR);
+
+    imshow("hsvImage", hsvImage);
+    imshow("saturated", saturatedImage);
+
+
+}
+
+void filtroErode(Mat& imgUm, Mat& imgDois) {
+    Mat imgDilate;
+    Mat kernel = getStructuringElement(MORPH_RECT, Size(5, 5));
+    dilate(imgUm, imgDilate, kernel);
+    erode(imgDilate, imgDois, kernel);
+}
+
+
+static void mouseCallback(int event, int x, int y, int flags, void* userdata) {
+
+    if (event == EVENT_LBUTTONDOWN) {
+        cout << "Left click has made, Position(" << x << "," << y << ")" << endl;
+        mouseEvent = LEFTBUTTON_DOWN;
+        mousex = x;
+        mousey = y;
+        cout << "lalalalalaal" << endl;
+    
+        if (x > 355.0 && x < 355.0 + 65 && y > 555.0 && y < 555.0 + 40.0) { //fogos de artificio
+           aplicaFire(mousex, mousey);
+        }
+        else if (x > 435.0 && x < 435.0 + 65 && y > 555.0 && y < 555.0 + 40.0) { //confeitos
+          aplicaoutroFire(mousex, mousey);
+        }
+        else if (x > 515.0 && x < 515.0 + 65 && y > 555.0 && y < 555.0 + 40.0) { //confete
+           sticker = CONFETE;
+        }
+        else if (x > 595.0 && x < 595.0 + 65 && y > 555.0 && y < 555.0 + 40.0) { //coracao
+          sticker = CORACAO;
+               
+        }
+        else if (x > 675.0 && x < 675.0 + 65 && y > 555.0 && y < 555.0 + 40.0) { //Balao
+           sticker = BALAO;
+        }
+        //area da foto
+        else if (x > 350.0 && x < 350.0 + 400.0 && y > 50.0 && y < 50.0 + 500.0) {
+          aplicaSticker(mousex, mousey);
+          sticker = NENHUM;
+        }
+
+        // Coordenadas dos filtros
+        else if (x > 50.0 && x < 50.0 + 85.0 && y > 0.0 && y < 0.0 + 100.0) { //filtro 1
+            
+            filtroBlur(imgFotoAtual, imgFotoAtual);
+        }
+        else if (x > 50.0 && x < 50.0 + 85.0 && y > 100.0 && y < 100.0 + 100.0) {
+            filtroCinza(imgFotoAtual, imgFotoAtual);
+        }
+        else if (x > 50.0 && x < 50.0 + 85.0 && y > 200.0 && y < 200.0 + 100.0) {
+            filtroSobel(imgFotoAtual, imgFotoAtual);
+        }
+        else if (x > 50.0 && x < 50.0 + 85.0 && y > 300.0 && y < 300.0 + 100.0) {
+            filtroClaro(imgFotoAtual, imgFotoAtual);
+
+        }
+        else if (x > 50.0 && x < 50.0 + 85.0 && y > 400.0 && y < 400.0 + 100.0) {
+            filtroEscuro(imgFotoAtual, imgFotoAtual);
+        }
+         else if (x > 50.0 && x < 50.0 + 85.0 && y > 500.0 && y < 500.0 + 100.0) {
+            filtroOutroblur(imgFotoAtual,imgFotoAtual);
+
+        }
+        else if (x > 140.0 && x < 140.0 + 85.0 && y > 0.0 && y < 0.0 + 100.0) {
+            filtroSharping(imgFotoAtual);
+        }
+        else if (x > 140.0 && x < 140.0 + 85.0 && y > 100.0 && y < 100.0 + 100.0) {
+            filtroShaperning(imgFotoAtual,imgFotoAtual);
+        }
+        else if (x > 140.0 && x < 140.0 + 85.0 && y > 200.0 && y < 200.0 + 100.0) {
+            filtroDesaturacao(imgFotoAtual);
+        }
+        else if (x > 140.0 && x < 140.0 + 85.0 && y > 300.0 && y < 300.0 + 100.0) {
+            filtroErode(imgFotoAtual,imgFotoAtual);
+        }
+        
+
+        
+        cvtColor(imgFotoAtual, imgFotoAtual, COLOR_BGR2BGRA);
+        overlayImage(&imgFundo, &imgFotoAtual, Point(350.0, 50.0));
+        imshow("Trabalho  Grau B - Marcus Vinicius", imgFundo);
+        
+    }
+}
+
+
+int main()
+{
+    String text = "";
+    cout << "Digite o nome da imagem : ";
+    getline(cin, text);
+
+    String nomeImg = "C:/Users/marke/Documents/fotos/" + text + ".jpg";
+    
+
+    //Carrega a foto
+    imgFundo = imread("C:/Users/marke/Documents/fotos/background.jpeg");
+    imgFotoOriginal = imread(nomeImg);
+    resize(imgFundo, imgFundo, Size(800, 600));
+    resize(imgFotoOriginal, imgFotoOriginal, Size(400, 500));
+    imgFotoAtual = imgFotoOriginal.clone();
+      
+
+
+    setupMenu();
+    // desenha sobre o fundo
+    cvtColor(imgFundo, imgFundo, COLOR_BGR2BGRA);
+    cvtColor(imgFotoOriginal, imgFotoOriginal, COLOR_BGR2BGRA);
+    overlayImage(&imgFundo, &imgFotoOriginal, Point(350.0, 50.0));
+
+   
+    //Desenha a Imagem e verifa o mouse
+    namedWindow(" Trabalho  Grau B - Marcus Vinicius", WINDOW_AUTOSIZE);
+    imshow("Trabalho  Grau B - Marcus Vinicius", imgFundo);
+    setMouseCallback("Trabalho  Grau B - Marcus Vinicius", mouseCallback, NULL);
+   
+   int k = waitKey(0);
+
+   if(k == 's')
+    {
+        imwrite("C:/Users/marke/Documents/fotos/fotoopencv.png", imgFotoOriginal);
+    }
+    return 0;
+
+    for (;;) {
+        char c = (char)waitKey();
+        if (c == 27)
+            break;
+    }
+    return 0;
+}
